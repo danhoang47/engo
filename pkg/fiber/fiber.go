@@ -45,8 +45,6 @@ func CreateWorkInProgress(current *Fiber, pendingProps interface{}) *Fiber {
 	var workInProgress *Fiber
 
 	if current.Alternate == nil {
-		// A. Nếu chưa có bản sao -> Tạo mới
-		// (Sau này nên dùng Object Pool ở đây thay vì new)
 		workInProgress = &Fiber{
 			Node:      current.Node,
 			Tag:       current.Tag,
@@ -55,27 +53,22 @@ func CreateWorkInProgress(current *Fiber, pendingProps interface{}) *Fiber {
 		}
 		current.Alternate = workInProgress
 	} else {
-		// B. Nếu đã có bản sao -> Tái sử dụng (Reset dữ liệu cũ)
 		workInProgress = current.Alternate
 
-		// Reset các cờ hiệu và dữ liệu layout cũ
 		workInProgress.Flags = EffectNone
 		workInProgress.SubtreeFlags = EffectNone
 		workInProgress.Sibling = nil
 		workInProgress.Child = nil
 
-		// Cập nhật dữ liệu mới nhất
 		workInProgress.Node = current.Node
 	}
 
 	// Copy các props mới vào
-	workInProgress.Props = pendingProps // Hoặc lấy từ current.Node nếu props nằm trong Node
+	workInProgress.Props = pendingProps
 
 	return workInProgress
 }
 
-// IsSameNode kiểm tra xem Fiber này và Node dữ liệu mới có tương thích không?
-// (Dùng để quyết định Reuse hay đập đi xây lại)
 func (f *Fiber) IsSameNode(node *scene.Node) bool {
 	// 1. So sánh Key (Quan trọng nhất cho danh sách)
 	if f.Key != node.ID {
@@ -93,8 +86,8 @@ func (f *Fiber) IsSameNode(node *scene.Node) bool {
 	return true
 }
 
-func (f *Fiber) HasPropsChanged(newNode *scene.Node) bool {
-	return newNode.Flags != scene.FlagNone
+func (f *Fiber) HasPropsChanged() bool {
+	return f.Node.Flags != scene.FlagNone
 }
 
 func (f *Fiber) ComputeMatrix(parentMatrix protocol.Matrix) {

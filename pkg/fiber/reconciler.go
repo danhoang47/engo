@@ -155,7 +155,7 @@ func (r *Reconciler) reconcileChildren(returnFiber *Fiber, newChildren []*scene.
 			}
 			newFiber.Index = i
 
-			if matchedFiber.HasPropsChanged(newNode) {
+			if matchedFiber.HasPropsChanged() {
 				newFiber.MarkUpdate()
 			}
 		} else {
