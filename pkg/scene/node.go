@@ -1,22 +1,119 @@
 package scene
 
+import "engo/pkg/style"
+
 type NodeType int
 
 const (
-	ElementNode NodeType = iota
-	TextNode
+	// Like Figma, one page has one and only one Page node
+	Page NodeType = iota
+	Frame
+	// Placeholder, no-op node, for semantic grouping purpose
+	Section
+	// TODO: Node type for vector
+	Vector
+	// Placeholder, use to group nodes inside
+	Group
+	// Rect, circle, ellipse, etc...
+	Polygon
+	Line
+	Text
+	Image
+	// Component-based system
+	Component
+	Instance
+	// Conjunction, direction
+	Connector
+	// For note purpose
+	Sticky
 )
+
+// Each type will have difference behavior
+// Considering moving this into different files
+type HTMLElementType int
+
+const (
+	Div HTMLElementType = iota
+	Button
+	Anchor
+	Nav
+	List
+	ListItem
+	Checkbox
+	Radio
+	Toggle
+	Input
+)
+
+type NodeFlag uint32
+
+const (
+	FlagNone           NodeFlag = 0
+	FlagTransformDirty NodeFlag = 1 << 0
+	FlagContentDirty   NodeFlag = 1 << 1
+	FlagLayoutDirty    NodeFlag = 1 << 2
+	FlagSubtreeDirty   NodeFlag = 1 << 3
+)
+
+// TODO: Built-in node from element types
 
 type Node struct {
 	ID uint32
 
-	Parent   *Node
-	Children []*Node
-	Type     NodeType
+	Parent          *Node
+	Children        []*Node
+	Type            NodeType
+	HTMLElementType HTMLElementType
+
+	Style         *style.Style
+	ComputedStyle *style.Style
+
+	Flags NodeFlag
 }
 
-// Manipulate child nodes functions
-// TODO: Construct a Fiber tree after changes
+var counter uint32 = 0
+
+func NewNode(nodeType NodeType, parent *Node) *Node {
+	// Increase ID
+	counter = counter + 1
+
+	return &Node{
+		Parent:          parent,
+		Type:            nodeType,
+		HTMLElementType: Div,
+		Flags:           FlagContentDirty,
+	}
+}
+
+// TODO: Implement
+func NewNodeWithHTMLTag() {
+
+}
+
+func (n *Node) MarkDirty(flag NodeFlag) {
+	if n.Flags&flag != 0 {
+		return
+	}
+
+	n.Flags |= flag
+
+	if flag == FlagTransformDirty || flag == FlagLayoutDirty {
+		n.bubbleUp()
+	}
+}
+
+func (n *Node) bubbleUp() {
+	curr := n.Parent
+	for curr != nil {
+		if curr.Flags&FlagSubtreeDirty != 0 {
+			break
+		}
+
+		curr.Flags |= FlagSubtreeDirty
+		curr = curr.Parent
+	}
+}
+
 func (n *Node) InsertBefore(newChild, beforeChild *Node) {
 	for i, c := range n.Children {
 		if c == beforeChild {
@@ -92,13 +189,6 @@ func (n *Node) HasChildNodes() bool {
 	return len(n.Children) > 0
 }
 
-// Implement EventTarget interface
-// TODO: Implement
-func (n *Node) DispatchEvent(event Event) {
-
-}
-
-// TODO: Implement
-func (n *Node) AddEventListener(eventType EventType, listener EventListener) {
-
+func (n *Node) IsContainer() bool {
+	return n.Type == Group || n.Type == Frame || n.Type == Page
 }
